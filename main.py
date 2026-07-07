@@ -85,7 +85,9 @@ async def ping_options(request: Request):
             headers={
                 "Access-Control-Allow-Origin": origin,
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "X-Request-ID, X-Client-Id, Content-Type",
+                "Access-Control-Allow-Headers": request.headers.get(
+               "access-control-request-headers", "*"
+                ),
             },
         )
 
@@ -109,6 +111,7 @@ async def ping(request: Request):
 
     if origin == ALLOWED_ORIGIN:
         response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
 
     response.headers["X-Request-ID"] = request.state.request_id
 
