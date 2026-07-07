@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from collections import defaultdict, deque
@@ -9,7 +9,6 @@ app = FastAPI()
 
 EMAIL = "24f1002853@ds.study.iitm.ac.in"
 
-# Allowed origins
 ALLOWED_ORIGINS = [
     "https://app-gxpafu.example.com",
     "https://tds.s-anand.net",
@@ -24,15 +23,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate Limiting
 RATE_LIMIT = 12
-WINDOW = 10  # seconds
+WINDOW = 10
 
 client_requests = defaultdict(deque)
 
-# ---------------------------
+
+# ----------------------------------
 # Request Context Middleware
-# ---------------------------
+# ----------------------------------
 @app.middleware("http")
 async def request_context(request: Request, call_next):
 
@@ -50,9 +49,9 @@ async def request_context(request: Request, call_next):
     return response
 
 
-# ---------------------------
+# ----------------------------------
 # Rate Limiter Middleware
-# ---------------------------
+# ----------------------------------
 @app.middleware("http")
 async def rate_limiter(request: Request, call_next):
 
@@ -78,26 +77,53 @@ async def rate_limiter(request: Request, call_next):
     return await call_next(request)
 
 
-# ---------------------------
-# Root Endpoint
-# ---------------------------
+# ----------------------------------
+# Root
+# ----------------------------------
 @app.get("/")
 async def root():
     return {"status": "running"}
 
 
-# ---------------------------
-# Ping Endpoint
-# ---------------------------
+# ----------------------------------
+# OPTIONS /ping
+# ----------------------------------
+@app.options("/ping")
+async def ping_options(request: Request):
+
+    origin = request.headers.get("origin")
+
+    if origin in ALLOWED_ORIGINS:
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+
+    return Response(status_code=403)
+
+
+# ----------------------------------
+# GET /ping
+# ----------------------------------
 @app.get("/ping")
 async def ping(request: Request):
 
-    return JSONResponse(
+    response = JSONResponse(
         content={
             "email": EMAIL,
             "request_id": request.state.request_id,
-        },
-        headers={
-            "X-Request-ID": request.state.request_id,
-        },
+        }
     )
+
+    origin = request.headers.get("origin")
+
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+    response.headers["X-Request-ID"] = request.state.request_id
+
+    return response
