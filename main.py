@@ -97,10 +97,10 @@ async def ping_options(request: Request):
         return Response(
             status_code=200,
             headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "*",
-            },
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "X-Request-ID, X-Client-Id, Content-Type",
+             },
         )
 
     return Response(status_code=403)
