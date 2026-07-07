@@ -8,17 +8,20 @@ app = FastAPI()
 
 EMAIL = "24f1002853@ds.study.iitm.ac.in"
 
-ALLOWED_ORIGIN = "https://app-gxpafu.example.com"
+ALLOWED_ORIGINS = [
+    "https://app-gxpafu.example.com",
+    "https://exam.sanand.workers.dev",
+]
 
 RATE_LIMIT = 12
-WINDOW = 10
+WINDOW = 10  # seconds
 
 client_requests = defaultdict(deque)
 
 
-# ---------------------------
+# ---------------------------------
 # Request Context Middleware
-# ---------------------------
+# ---------------------------------
 @app.middleware("http")
 async def request_context(request: Request, call_next):
 
@@ -36,9 +39,9 @@ async def request_context(request: Request, call_next):
     return response
 
 
-# ---------------------------
+# ---------------------------------
 # Rate Limiter Middleware
-# ---------------------------
+# ---------------------------------
 @app.middleware("http")
 async def rate_limiter(request: Request, call_next):
 
@@ -47,6 +50,7 @@ async def rate_limiter(request: Request, call_next):
     if client:
 
         now = time.time()
+
         q = client_requests[client]
 
         while q and now - q[0] >= WINDOW:
@@ -63,40 +67,43 @@ async def rate_limiter(request: Request, call_next):
     return await call_next(request)
 
 
-# ---------------------------
-# Root
-# ---------------------------
+# ---------------------------------
+# Root Endpoint
+# ---------------------------------
 @app.get("/")
 async def root():
     return {"status": "running"}
 
 
-# ---------------------------
+# ---------------------------------
 # OPTIONS /ping
-# ---------------------------
+# ---------------------------------
 @app.options("/ping")
 async def ping_options(request: Request):
 
     origin = request.headers.get("origin")
 
-    if origin == ALLOWED_ORIGIN:
+    if origin in ALLOWED_ORIGINS:
+
         return Response(
             status_code=200,
             headers={
                 "Access-Control-Allow-Origin": origin,
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
                 "Access-Control-Allow-Headers": request.headers.get(
-               "access-control-request-headers", "*"
+                    "access-control-request-headers",
+                    "*",
                 ),
+                "Vary": "Origin",
             },
         )
 
     return Response(status_code=403)
 
 
-# ---------------------------
+# ---------------------------------
 # GET /ping
-# ---------------------------
+# ---------------------------------
 @app.get("/ping")
 async def ping(request: Request):
 
@@ -109,7 +116,7 @@ async def ping(request: Request):
 
     origin = request.headers.get("origin")
 
-    if origin == ALLOWED_ORIGIN:
+    if origin in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
 
