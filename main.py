@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from collections import defaultdict, deque
 import uuid
 import time
@@ -8,13 +9,26 @@ app = FastAPI()
 
 EMAIL = "24f1002853@ds.study.iitm.ac.in"
 
-ALLOWED_ORIGIN = "https://app-gxpafu.example.com"
+# Allowed origins
+ALLOWED_ORIGINS = [
+    "https://app-gxpafu.example.com",
+    "https://tds.s-anand.net",
+    "https://exam.s-anand.net",
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Rate Limiting
 RATE_LIMIT = 12
 WINDOW = 10  # seconds
 
 client_requests = defaultdict(deque)
-
 
 # ---------------------------
 # Request Context Middleware
@@ -65,7 +79,7 @@ async def rate_limiter(request: Request, call_next):
 
 
 # ---------------------------
-# Root
+# Root Endpoint
 # ---------------------------
 @app.get("/")
 async def root():
@@ -73,44 +87,17 @@ async def root():
 
 
 # ---------------------------
-# CORS Preflight
-# ---------------------------
-@app.options("/ping")
-async def ping_options(request: Request):
-
-    origin = request.headers.get("origin")
-
-    if origin == ALLOWED_ORIGIN:
-        return Response(
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "*",
-            },
-        )
-
-    return Response(status_code=403)
-
-
-# ---------------------------
-# Ping
+# Ping Endpoint
 # ---------------------------
 @app.get("/ping")
 async def ping(request: Request):
 
-    response = JSONResponse(
+    return JSONResponse(
         content={
             "email": EMAIL,
             "request_id": request.state.request_id,
-        }
+        },
+        headers={
+            "X-Request-ID": request.state.request_id,
+        },
     )
-
-    origin = request.headers.get("origin")
-
-    if origin == ALLOWED_ORIGIN:
-        response.headers["Access-Control-Allow-Origin"] = origin
-
-    response.headers["X-Request-ID"] = request.state.request_id
-
-    return response
