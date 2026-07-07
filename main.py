@@ -14,7 +14,7 @@ ALLOWED_ORIGINS = [
 ]
 
 RATE_LIMIT = 12
-WINDOW = 10  # seconds
+WINDOW = 10
 
 client_requests = defaultdict(deque)
 
@@ -25,6 +25,7 @@ client_requests = defaultdict(deque)
 @app.middleware("http")
 async def request_context(request: Request, call_next):
 
+    # Reuse incoming request id if present
     request_id = request.headers.get("X-Request-ID")
 
     if not request_id:
@@ -34,6 +35,7 @@ async def request_context(request: Request, call_next):
 
     response = await call_next(request)
 
+    # Echo the SAME request id back
     response.headers["X-Request-ID"] = request_id
 
     return response
@@ -68,7 +70,7 @@ async def rate_limiter(request: Request, call_next):
 
 
 # ---------------------------------
-# Root Endpoint
+# Root
 # ---------------------------------
 @app.get("/")
 async def root():
@@ -92,7 +94,7 @@ async def ping_options(request: Request):
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
                 "Access-Control-Allow-Headers": request.headers.get(
                     "access-control-request-headers",
-                    "*",
+                    "*"
                 ),
                 "Vary": "Origin",
             },
@@ -120,6 +122,7 @@ async def ping(request: Request):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
 
+    # Echo request id in response header
     response.headers["X-Request-ID"] = request.state.request_id
 
     return response
